@@ -8,5 +8,7 @@ class Player extends Model
 {
     protected $table='players';
 
-
+    public function games() {
+        return $this->hasMany(Game::class);
+    }
 }

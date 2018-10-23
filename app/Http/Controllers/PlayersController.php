@@ -80,7 +80,10 @@ class PlayersController extends Controller
     public function show($id)
     {
         try {
-            $entry = Player::find($id);
+            $entry = Player::with('games')
+                ->find($id);
+
+            Log::info($entry->games);
 
             return response()->json([
                 'status' => 200,
