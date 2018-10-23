@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Player;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PlayersController extends Controller
@@ -50,15 +51,19 @@ class PlayersController extends Controller
         $name = request()->get('name');
 
         try {
+            DB::beginTransaction();
             $entry = new Player();
             $entry->name = $name;
             $entry->save();
 
+            DB::commit();
             return response()->json([
                 'status' => 200,
                 'message' => 'You have successfully created a new Player.'
             ]);
         } catch (QueryException $e) {
+            DB::rollBack();
+
             return response()->json([
                 'status' => 500,
                 'message' => 'There was an internal error.'
@@ -125,15 +130,18 @@ class PlayersController extends Controller
         $name = request()->get('name');
 
         try {
+            DB::beginTransaction();
             $entry = Player::find($id);
             $entry->name = $name;
             $entry->save();
 
+            DB::commit();
             return response()->json([
                 'status' => 200,
                 'message' => 'You have successfully updated Player ' . $entry->name . '.'
             ]);
         } catch (QueryException $e) {
+            DB::rollBack();
             return response()->json([
                 'status' => 500,
                 'message' => 'There was an internal error.'

@@ -3,13 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Game;
+use App\Player;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
+use App\Traits\CreateAndStorePlayer;
+
 class GameController extends Controller
 {
+
+    use CreateAndStorePlayer;
+
     /**
      * Display a listing of the resource.
      *
@@ -18,37 +25,35 @@ class GameController extends Controller
     public function index()
     {
         $response = Game::join('players', 'games.player_id', '=', 'players.id')
+            ->where('games.user_id', 1)
             ->select([
                 'games.id as id',
                 'games.enemy_elo as enemyElo',
                 'games.difficulty as difficulty',
                 'games.result as result',
                 'players.name as enemyName',
-//                'enemy_name as enemyName',
                 'games.comment as comment'
             ])->orderBy('id', 'desc')
             ->get();
 
-        Log::info($response->toJson());
-
 
         return response()->json([
-            $response
+            'data' => [
+                $response
+            ]
         ]);
     }
 
     public function gamesResults()
     {
-        Log::info('GAMES RESULTS');
-
         $result = Game::select([
             'result'
         ])->pluck('result');
 
-        Log::info($result);
-
         return response()->json([
-            $result
+            'data' => [
+                $result
+            ]
         ]);
     }
 
@@ -70,11 +75,6 @@ class GameController extends Controller
      */
     public function store(Request $request)
     {
-
-        Log::info($request);
-        Log::info(request()->get('enemyName'));
-
-
         $enemyName = request()->get('enemyName');
         $enemyElo = request()->get('enemyElo');
         $difficulty = 1;
@@ -83,26 +83,41 @@ class GameController extends Controller
         $userId = 1;
 
         try {
+            DB::beginTransaction();
             $entry = new Game();
             $entry->user_id = $userId;
             $entry->enemy_elo = $enemyElo;
             $entry->difficulty = $difficulty;
             $entry->result = $result;
-            $entry->enemy_name = $enemyName;
+
+            //check if given player name already exists on the database
+            $player = Player::where('name', $enemyName)->first();
+            if(count($player)) {
+                //player already exists, use its ID
+                $entry->player_id = $player->id;
+            } else {
+                //player doesnt exist yet, create it and store its ID
+                $entry->player_id = $this->createAndStorePlayer($enemyName);
+            }
+
             $entry->comment = $comment;
             $entry->save();
-            Log::info('save');
 
+            DB::commit();
             return response()->json([
-                'status' => 200,
-                'message' => 'You have successfully created a new Player.'
+                'data' => [
+                    'status' => 200,
+                    'message' => 'You have successfully created a new Player.'
+                ]
             ]);
         } catch (QueryException $e) {
-            Log::info($e);
+            DB::rollBack();
 
             return response()->json([
-                'status' => 500,
-                'message' => 'There was an internal error.'
+                'data' => [
+                    'status' => 500,
+                    'message' => 'There was an internal server error.'
+                ]
             ]);
         }
     }
@@ -115,17 +130,12 @@ class GameController extends Controller
      */
     public function show($id)
     {
-        Log::info('SHOW GAME');
-        Log::info($id);
-
         $entry = Game::find($id);
-        Log::info($entry);
-
 
         return response()->json([
-            $entry
-//            'status' => 200,
-//            'data' => $entry
+            'data' => [
+                $entry
+            ]
         ]);
     }
 
