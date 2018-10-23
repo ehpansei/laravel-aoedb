@@ -17,16 +17,17 @@ class GameController extends Controller
      */
     public function index()
     {
-        $response = Game::select([
-            'id as id',
-            'enemy_elo as enemyElo',
-            'difficulty as difficulty',
-            'result as result',
-            'enemy_name as enemyName',
-            'comment as comment'
-        ])->orderBy('id', 'desc')
+        $response = Game::join('players', 'games.player_id', '=', 'players.id')
+            ->select([
+                'games.id as id',
+                'games.enemy_elo as enemyElo',
+                'games.difficulty as difficulty',
+                'games.result as result',
+                'players.name as enemyName',
+//                'enemy_name as enemyName',
+                'games.comment as comment'
+            ])->orderBy('id', 'desc')
             ->get();
-//            ->paginate(10);
 
         Log::info($response->toJson());
 
@@ -36,7 +37,8 @@ class GameController extends Controller
         ]);
     }
 
-    public function gamesResults() {
+    public function gamesResults()
+    {
         Log::info('GAMES RESULTS');
 
         $result = Game::select([
