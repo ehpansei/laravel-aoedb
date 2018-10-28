@@ -20,6 +20,7 @@ class PlayersController extends Controller
             'id',
             'name'
         ])
+            ->withCount('games')
             ->orderBy('id', 'desc')
             ->get();
 
@@ -81,9 +82,11 @@ class PlayersController extends Controller
     {
         try {
             $entry = Player::with('games')
+                ->withCount('games')
                 ->find($id);
 
-            Log::info($entry->games);
+
+            Log::info($entry);
 
             return response()->json([
                 'status' => 200,
